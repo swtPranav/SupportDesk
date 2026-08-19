@@ -1,5 +1,10 @@
 from fastapi import FastAPI
 
+from app.database import Base, engine
+from app.models import Note, Ticket
+
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="SupportDesk API",
     description="Customer Support Ticketing CRM API",
