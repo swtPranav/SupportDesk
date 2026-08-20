@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 
 from app.database import Base, engine
-from app.routers import tickets
+from app.routers import notes, tickets
 
 from app.models import Note, Ticket
 
 Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI(
     title="SupportDesk API",
@@ -14,6 +15,7 @@ app = FastAPI(
 )
 
 app.include_router(tickets.router)
+app.include_router(notes.router)
 
 
 @app.get("/")

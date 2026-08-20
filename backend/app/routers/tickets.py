@@ -1,17 +1,18 @@
-from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.ticket import Ticket
+from app.models.note import Note
 from app.schemas.ticket import (
     TicketCreate,
     TicketListResponse,
     TicketResponse,
+    TicketUpdate,
 )
+
 
 router = APIRouter(
     prefix="/api/tickets",
@@ -200,3 +201,32 @@ def update_ticket(
     db.refresh(ticket)
 
     return ticket
+
+@router.delete(
+    "/{ticket_id}/notes/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_note(
+    ticket_id: str,
+    note_id: int,
+    db: Session = Depends(get_db),
+):
+    note = (
+        db.query(Note)
+        .filter(
+            Note.id == note_id,
+            Note.ticket_id == ticket_id,
+        )
+        .first()
+    )
+
+    if not note:
+        raise HTTPException(
+            status_code=404,
+            detail="Note not found",
+        )
+
+    db.delete(note)
+    db.commit()
+
+    return None
