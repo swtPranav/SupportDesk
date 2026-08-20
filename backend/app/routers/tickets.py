@@ -1,7 +1,6 @@
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -11,6 +10,7 @@ from app.schemas.ticket import (
     TicketCreate,
     TicketListResponse,
     TicketResponse,
+    TicketUpdate,
 )
 
 router = APIRouter(
@@ -160,6 +160,44 @@ def get_ticket(
             status_code=404,
             detail="Ticket not found",
         )
+
+    return ticket
+
+@router.put(
+    "/{ticket_id}",
+    response_model=TicketResponse,
+)
+def update_ticket(
+    ticket_id: str,
+    ticket_data: TicketUpdate,
+    db: Session = Depends(get_db),
+):
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.ticket_id == ticket_id)
+        .first()
+    )
+
+    if not ticket:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found",
+        )
+
+    if ticket_data.status is not None:
+        ticket.status = ticket_data.status
+
+    if ticket_data.priority is not None:
+        ticket.priority = ticket_data.priority
+
+    if ticket_data.subject is not None:
+        ticket.subject = ticket_data.subject
+
+    if ticket_data.description is not None:
+        ticket.description = ticket_data.description
+
+    db.commit()
+    db.refresh(ticket)
 
     return ticket
 
