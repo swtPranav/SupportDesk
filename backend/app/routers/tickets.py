@@ -1,4 +1,3 @@
-from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
@@ -6,12 +5,14 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.ticket import Ticket
+from app.models.note import Note
 from app.schemas.ticket import (
     TicketCreate,
     TicketListResponse,
     TicketResponse,
     TicketUpdate,
 )
+
 
 router = APIRouter(
     prefix="/api/tickets",
@@ -201,40 +202,31 @@ def update_ticket(
 
     return ticket
 
-@router.put(
-    "/{ticket_id}",
-    response_model=TicketResponse,
+@router.delete(
+    "/{ticket_id}/notes/{note_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
-def update_ticket(
+def delete_note(
     ticket_id: str,
-    ticket_data: TicketUpdate,
+    note_id: int,
     db: Session = Depends(get_db),
 ):
-    ticket = (
-        db.query(Ticket)
-        .filter(Ticket.ticket_id == ticket_id)
+    note = (
+        db.query(Note)
+        .filter(
+            Note.id == note_id,
+            Note.ticket_id == ticket_id,
+        )
         .first()
     )
 
-    if not ticket:
+    if not note:
         raise HTTPException(
             status_code=404,
-            detail="Ticket not found",
+            detail="Note not found",
         )
 
-    if ticket_data.status is not None:
-        ticket.status = ticket_data.status
-
-    if ticket_data.priority is not None:
-        ticket.priority = ticket_data.priority
-
-    if ticket_data.subject is not None:
-        ticket.subject = ticket_data.subject
-
-    if ticket_data.description is not None:
-        ticket.description = ticket_data.description
-
+    db.delete(note)
     db.commit()
-    db.refresh(ticket)
 
-    return ticket
+    return None

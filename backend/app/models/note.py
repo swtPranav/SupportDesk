@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -9,29 +9,24 @@ from app.database import Base
 class Note(Base):
     __tablename__ = "notes"
 
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True,
-    )
+    id = Column(Integer, primary_key=True, index=True)
 
-    ticket_id: Mapped[int] = mapped_column(
-        ForeignKey("tickets.id"),
+    ticket_id = Column(
+        String,
+        ForeignKey("tickets.ticket_id"),
         nullable=False,
     )
 
-    note_text: Mapped[str] = mapped_column(
-        Text,
-        nullable=False,
-    )
+    # Keep this because it already exists in the database
+    # and is currently NOT NULL.
+    note_text = Column(Text, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
+    content = Column(Text, nullable=True)
+
+    created_at = Column(
         DateTime,
         default=datetime.utcnow,
         nullable=False,
     )
 
-    ticket = relationship(
-        "Ticket",
-        back_populates="notes",
-    )
+    ticket = relationship("Ticket", back_populates="notes")
