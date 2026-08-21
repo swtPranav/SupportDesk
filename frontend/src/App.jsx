@@ -8,6 +8,9 @@ import {
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Tickets from "./pages/tickets";
+import TicketDetail from "./pages/TicketDetail";
+import Agents from "./pages/Agents";
 
 function App() {
   return (
@@ -23,6 +26,10 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="/tickets" element={<ProtectedRoute><Tickets /></ProtectedRoute>} />
+        <Route path="/tickets/:ticketId" element={<ProtectedRoute><TicketDetail /></ProtectedRoute>} />
+        <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
 
         <Route
           path="*"

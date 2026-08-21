@@ -4,7 +4,10 @@ import api from "../services/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("supportdesk_user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [token, setToken] = useState(
     localStorage.getItem("access_token")
   );
@@ -21,18 +24,21 @@ export function AuthProvider({ children }) {
 
     setToken(data.access_token);
 
-    setUser({
+    const loggedInUser = {
       id: data.user_id,
       name: data.name,
       email: data.email,
       role: data.role,
-    });
+    };
+    localStorage.setItem("supportdesk_user", JSON.stringify(loggedInUser));
+    setUser(loggedInUser);
 
     return data;
   };
 
   const logout = () => {
     localStorage.removeItem("access_token");
+    localStorage.removeItem("supportdesk_user");
     setToken(null);
     setUser(null);
   };

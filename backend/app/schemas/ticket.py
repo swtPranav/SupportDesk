@@ -28,6 +28,7 @@ class TicketResponse(BaseModel):
     description: str
     status: str
     priority: str
+    assigned_to: int | None = None
     created_at: datetime
     updated_at: datetime
 
