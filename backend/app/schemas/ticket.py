@@ -11,6 +11,11 @@ class TicketCreate(BaseModel):
     priority: str = Field(default="Medium")
 
 
+class PublicTicketResponse(BaseModel):
+    ticket_id: str
+    status: str
+
+
 class TicketUpdate(BaseModel):
     status: str | None = None
     priority: str | None = None

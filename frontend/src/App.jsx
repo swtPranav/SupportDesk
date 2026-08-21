@@ -11,12 +11,14 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Tickets from "./pages/tickets";
 import TicketDetail from "./pages/TicketDetail";
 import Agents from "./pages/Agents";
+import PublicSupport from "./pages/PublicSupport";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/support" element={<PublicSupport />} />
 
         <Route
           path="/dashboard"
