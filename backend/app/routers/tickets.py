@@ -1,12 +1,17 @@
+from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from app.permissions import require_admin
 from app.database import get_db
 from app.models.ticket import Ticket
+from app.models.user import User
+from app.dependencies import get_current_user
 from app.models.note import Note
 from app.schemas.ticket import (
+    TicketAssignment,
     TicketCreate,
     TicketListResponse,
     TicketResponse,
@@ -42,6 +47,7 @@ def generate_ticket_id(db: Session) -> str:
 def create_ticket(
     ticket: TicketCreate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     ticket_id = generate_ticket_id(db)
 
@@ -90,6 +96,7 @@ def get_tickets(
         description="Number of tickets per page",
     ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     query = db.query(Ticket)
 
@@ -149,6 +156,7 @@ def get_tickets(
 def get_ticket(
     ticket_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     ticket = (
         db.query(Ticket)
@@ -172,6 +180,7 @@ def update_ticket(
     ticket_id: str,
     ticket_data: TicketUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     ticket = (
         db.query(Ticket)
@@ -202,31 +211,47 @@ def update_ticket(
 
     return ticket
 
-@router.delete(
-    "/{ticket_id}/notes/{note_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+@router.put(
+    "/{ticket_id}/assign",
+    response_model=TicketResponse,
 )
-def delete_note(
+def assign_ticket(
     ticket_id: str,
-    note_id: int,
+    assignment: TicketAssignment,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
-    note = (
-        db.query(Note)
-        .filter(
-            Note.id == note_id,
-            Note.ticket_id == ticket_id,
-        )
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.ticket_id == ticket_id)
         .first()
     )
 
-    if not note:
+    if not ticket:
         raise HTTPException(
             status_code=404,
-            detail="Note not found",
+            detail="Ticket not found",
         )
 
-    db.delete(note)
-    db.commit()
+    if assignment.assigned_to is not None:
+        user = (
+            db.query(User)
+            .filter(
+                User.id == assignment.assigned_to,
+                User.is_active == True,
+            )
+            .first()
+        )
 
-    return None
+        if not user:
+            raise HTTPException(
+                status_code=404,
+                detail="Active user not found",
+            )
+
+    ticket.assigned_to = assignment.assigned_to
+
+    db.commit()
+    db.refresh(ticket)
+
+    return ticket
