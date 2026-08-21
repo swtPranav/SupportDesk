@@ -13,6 +13,7 @@ from app.models.note import Note
 from app.schemas.ticket import (
     TicketAssignment,
     TicketCreate,
+    TicketDetailResponse,
     TicketListResponse,
     PublicTicketResponse,
     TicketResponse,
@@ -177,7 +178,7 @@ def get_tickets(
 
 @router.get(
     "/{ticket_id}",
-    response_model=TicketResponse,
+    response_model=TicketDetailResponse,
 )
 def get_ticket(
     ticket_id: str,

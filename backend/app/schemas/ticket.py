@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.schemas.note import NoteResponse
+
 
 class TicketCreate(BaseModel):
     customer_name: str = Field(min_length=2, max_length=100)
@@ -36,6 +38,10 @@ class TicketResponse(BaseModel):
     assigned_to: int | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class TicketDetailResponse(TicketResponse):
+    notes: list[NoteResponse] = []
 
 class TicketListResponse(BaseModel):
     tickets: list[TicketResponse]

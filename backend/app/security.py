@@ -1,10 +1,15 @@
+import os
+
+from dotenv import load_dotenv
 import jwt
 from pwdlib import PasswordHash
 
 
+load_dotenv()
+
 password_hash = PasswordHash.recommended()
 
-SECRET_KEY = "supportdesk-assessment-secret-key"
+SECRET_KEY = os.getenv("SECRET_KEY", "change-this-in-production")
 ALGORITHM = "HS256"
 
 
