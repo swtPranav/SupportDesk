@@ -13,7 +13,9 @@ from app.models.note import Note
 from app.schemas.ticket import (
     TicketAssignment,
     TicketCreate,
+    TicketDetailResponse,
     TicketListResponse,
+    PublicTicketResponse,
     TicketResponse,
     TicketUpdate,
 )
@@ -65,6 +67,31 @@ def create_ticket(
     db.refresh(new_ticket)
 
     return new_ticket
+
+
+@router.post(
+    "/public",
+    response_model=PublicTicketResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_public_ticket(
+    ticket: TicketCreate,
+    db: Session = Depends(get_db),
+):
+    """Create an unassigned ticket without exposing staff-only APIs."""
+    new_ticket = Ticket(
+        ticket_id=generate_ticket_id(db),
+        customer_name=ticket.customer_name,
+        customer_email=ticket.customer_email,
+        subject=ticket.subject,
+        description=ticket.description,
+        priority=ticket.priority,
+        status="Open",
+    )
+    db.add(new_ticket)
+    db.commit()
+    db.refresh(new_ticket)
+    return {"ticket_id": new_ticket.ticket_id, "status": new_ticket.status}
 
 @router.get(
     "",
@@ -151,7 +178,7 @@ def get_tickets(
 
 @router.get(
     "/{ticket_id}",
-    response_model=TicketResponse,
+    response_model=TicketDetailResponse,
 )
 def get_ticket(
     ticket_id: str,

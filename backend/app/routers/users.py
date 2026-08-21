@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_admin
 from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse
+from app.schemas.user import UserCreate, UserResponse, UserStatusUpdate
 from app.security import hash_password
 
 
@@ -56,14 +56,14 @@ def create_user(
     response_model=list[UserResponse],
 )
 def get_users(
+    include_inactive: bool = Query(default=False),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
-    return (
-        db.query(User)
-        .filter(User.is_active == True)
-        .order_by(User.id.asc())
-        .all()
-    )
+    query = db.query(User)
+    if not include_inactive:
+        query = query.filter(User.is_active == True)
+    return query.order_by(User.id.asc()).all()
 
 
 @router.get(
@@ -73,6 +73,7 @@ def get_users(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
 ):
     user = (
         db.query(User)
@@ -89,4 +90,31 @@ def get_user(
             detail="User not found",
         )
 
+    return user
+
+
+@router.patch(
+    "/{user_id}",
+    response_model=UserResponse,
+)
+def update_user_status(
+    user_id: int,
+    user_data: UserStatusUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.id == current_user.id and not user_data.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot deactivate your own account",
+        )
+
+    user.is_active = user_data.is_active
+    db.commit()
+    db.refresh(user)
     return user

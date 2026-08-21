@@ -1,0 +1,12 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import api from "../services/api";
+import "./PublicSupport.css";
+
+const initialForm = { customer_name: "", customer_email: "", subject: "", description: "", priority: "Medium" };
+
+export default function PublicSupport() {
+  const [form, setForm] = useState(initialForm); const [saving, setSaving] = useState(false); const [error, setError] = useState(""); const [confirmation, setConfirmation] = useState("");
+  const submit = async (event) => { event.preventDefault(); setSaving(true); setError(""); try { const { data } = await api.post("/api/tickets/public", form); setConfirmation(data.ticket_id); setForm(initialForm); } catch (err) { setError(err.response?.data?.detail || "We could not submit your request. Please try again."); } finally { setSaving(false); } };
+  return <main className="public-support"><section className="support-card"><div className="support-brand"><span>SupportDesk</span><Link to="/login">Staff sign in</Link></div>{confirmation ? <div className="confirmation"><h1>Request received</h1><p>Your support ticket is <strong>{confirmation}</strong>. Please save this reference number.</p><button className="primary" onClick={() => setConfirmation("")}>Submit another request</button></div> : <><h1>How can we help?</h1><p className="muted">Submit a support request and our team will get back to you by email.</p>{error && <div className="alert error">{error}</div>}<form onSubmit={submit} className="public-form"><label>Your name<input required minLength="2" value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} /></label><label>Email address<input required type="email" value={form.customer_email} onChange={(e) => setForm({ ...form, customer_email: e.target.value })} /></label><label>What do you need help with?<input required minLength="3" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} /></label><label>Tell us more<textarea required value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label><label>Priority<select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })}><option>Low</option><option>Medium</option><option>High</option></select></label><button className="primary" disabled={saving}>{saving ? "Sending…" : "Submit request"}</button></form></>}</section></main>;
+}

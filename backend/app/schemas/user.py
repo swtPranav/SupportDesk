@@ -22,3 +22,7 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     created_at: datetime
+
+
+class UserStatusUpdate(BaseModel):
+    is_active: bool
