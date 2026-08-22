@@ -5,14 +5,70 @@ import AppShell from "../components/AppShell";
 import { useAuth } from "../context/AuthContext";
 import "./Tickets.css";
 
-const detailMessage = (err, fallback) => err.response?.data?.detail || fallback;
+const messageFor = (error, fallback) => error.response?.data?.detail || fallback;
+
 export default function TicketDetail() {
-  const { ticketId } = useParams(); const { user } = useAuth();
-  const [ticket, setTicket] = useState(null); const [agents, setAgents] = useState([]); const [notes, setNotes] = useState([]); const [note, setNote] = useState(""); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
-  const load = async () => { setError(""); try { const requests = [api.get(`/api/tickets/${ticketId}`), api.get(`/api/tickets/${ticketId}/notes`)]; if (user?.role === "admin") requests.push(api.get("/api/users")); const responses = await Promise.all(requests); setTicket(responses[0].data); setNotes(responses[1].data); setAgents(responses[2]?.data || []); } catch (err) { setError(detailMessage(err, "Could not load this ticket.")); } };
+  const { ticketId } = useParams();
+  const { user } = useAuth();
+  const [ticket, setTicket] = useState(null);
+  const [agents, setAgents] = useState([]);
+  const [notes, setNotes] = useState([]);
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setError("");
+    try {
+      const requests = [api.get(`/api/tickets/${ticketId}`), api.get(`/api/tickets/${ticketId}/notes`)];
+      if (user?.role === "admin") requests.push(api.get("/api/users"));
+      const responses = await Promise.all(requests);
+      setTicket(responses[0].data);
+      setNotes(responses[1].data);
+      setAgents(responses[2]?.data || []);
+    } catch (err) { setError(messageFor(err, "Could not load this ticket.")); }
+  };
+
   useEffect(() => { load(); }, [ticketId, user?.role]);
-  const update = async (changes = {}) => { setSaving(true); try { const { data } = await api.put(`/api/tickets/${ticketId}`, { subject: ticket.subject, description: ticket.description, status: ticket.status, priority: ticket.priority, ...changes }); setTicket(data); } catch (err) { setError(detailMessage(err, "Could not save ticket changes.")); } finally { setSaving(false); } };
-  const assign = async (assigned_to) => { setSaving(true); try { const { data } = await api.put(`/api/tickets/${ticketId}/assign`, { assigned_to: assigned_to ? Number(assigned_to) : null }); setTicket(data); } catch (err) { setError(detailMessage(err, "Could not update assignment.")); } finally { setSaving(false); } };
-  const addNote = async (event) => { event.preventDefault(); if (!note.trim()) return; setSaving(true); try { await api.post(`/api/tickets/${ticketId}/notes`, { content: note.trim() }); setNote(""); await load(); } catch (err) { setError(detailMessage(err, "Could not add note.")); } finally { setSaving(false); } };
-  return <AppShell title="Ticket details"><Link className="text-button back-link" to="/tickets">← All tickets</Link>{error && <div className="alert error">{error}</div>}{!ticket ? <div className="state">Loading ticket…</div> : <div className="detail-grid"><section className="detail-card"><div className="detail-heading"><div><span className="ticket-id">{ticket.ticket_id}</span><h2>{ticket.subject}</h2></div><span className={`pill status-${ticket.status.toLowerCase().replaceAll(" ", "-")}`}>{ticket.status}</span></div><div className="customer"><strong>{ticket.customer_name}</strong><a href={`mailto:${ticket.customer_email}`}>{ticket.customer_email}</a></div><label>Subject<input value={ticket.subject} onChange={(e) => setTicket({ ...ticket, subject: e.target.value })} onBlur={() => update()} /></label><label>Description<textarea value={ticket.description} onChange={(e) => setTicket({ ...ticket, description: e.target.value })} onBlur={() => update()} /></label><div className="field-row"><label>Status<select value={ticket.status} onChange={(e) => { const status = e.target.value; setTicket({ ...ticket, status }); update({ status }); }}><option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select></label><label>Priority<select value={ticket.priority} onChange={(e) => { const priority = e.target.value; setTicket({ ...ticket, priority }); update({ priority }); }}><option>High</option><option>Medium</option><option>Low</option></select></label></div><p className="muted">Created {new Date(ticket.created_at).toLocaleString()} · Updated {new Date(ticket.updated_at).toLocaleString()}</p></section><aside className="detail-card"><h3>Assignment</h3>{user?.role === "admin" ? <label>Assigned agent<select value={ticket.assigned_to || ""} disabled={saving} onChange={(e) => assign(e.target.value)}><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} ({agent.email})</option>)}</select></label> : <p>{ticket.assigned_to ? `Assigned to agent #${ticket.assigned_to}` : "Unassigned"}</p>}</aside><section className="detail-card notes-card"><h3>Notes</h3><form onSubmit={addNote} className="note-form"><textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" /><button className="primary" disabled={saving}>Add note</button></form>{notes.length === 0 ? <p className="muted">No notes yet.</p> : <div className="notes-list">{notes.map((item) => <article key={item.id} className="note"><p>{item.content}</p><small>{new Date(item.created_at).toLocaleString()}</small></article>)}</div>}</section></div>}</AppShell>;
+
+  const saveTicket = async (event) => {
+    event.preventDefault(); setSaving(true); setError(""); setSuccess("");
+    try {
+      const { data } = await api.put(`/api/tickets/${ticketId}`, {
+        subject: ticket.subject, description: ticket.description, status: ticket.status, priority: ticket.priority,
+      });
+      setTicket(data); setSuccess(`Ticket updated to ${data.status}.`);
+    } catch (err) { setError(messageFor(err, "Could not save ticket changes.")); } finally { setSaving(false); }
+  };
+
+  const assign = async (assigned_to) => {
+    setSaving(true); setError("");
+    try { const { data } = await api.put(`/api/tickets/${ticketId}/assign`, { assigned_to: assigned_to ? Number(assigned_to) : null }); setTicket(data); setSuccess("Ticket assignment updated."); }
+    catch (err) { setError(messageFor(err, "Could not update assignment.")); } finally { setSaving(false); }
+  };
+
+  const addNote = async (event) => {
+    event.preventDefault(); if (!note.trim()) return; setSaving(true); setError("");
+    try { await api.post(`/api/tickets/${ticketId}/notes`, { content: note.trim() }); setNote(""); setSuccess("Internal note added."); await load(); }
+    catch (err) { setError(messageFor(err, "Could not add note.")); } finally { setSaving(false); }
+  };
+
+  return <AppShell title="Ticket details">
+    <Link className="text-button back-link" to="/tickets">← All tickets</Link>
+    {error && <div className="alert error">{error}</div>}
+    {success && <div className="alert success">{success}</div>}
+    {!ticket ? <div className="state">Loading ticket…</div> : <div className="detail-grid">
+      <form className="detail-card" onSubmit={saveTicket}>
+        <div className="detail-heading"><div><span className="ticket-id">{ticket.ticket_id}</span><h2>{ticket.subject}</h2></div><span className={`pill status-${ticket.status.toLowerCase().replaceAll(" ", "-")}`}>{ticket.status}</span></div>
+        <div className="customer"><strong>{ticket.customer_name}</strong><a href={`mailto:${ticket.customer_email}`}>{ticket.customer_email}</a></div>
+        <label>Subject<input required minLength="3" value={ticket.subject} onChange={(e) => setTicket({ ...ticket, subject: e.target.value })} /></label>
+        <label>Description<textarea required value={ticket.description} onChange={(e) => setTicket({ ...ticket, description: e.target.value })} /></label>
+        <div className="field-row"><label>Status<select value={ticket.status} onChange={(e) => setTicket({ ...ticket, status: e.target.value })}><option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select></label><label>Priority<select value={ticket.priority} onChange={(e) => setTicket({ ...ticket, priority: e.target.value })}><option>High</option><option>Medium</option><option>Low</option></select></label></div>
+        <div className="save-row"><p className="muted">Created {new Date(ticket.created_at).toLocaleString()} · Updated {new Date(ticket.updated_at).toLocaleString()}</p><button className="primary" disabled={saving}>{saving ? "Saving…" : "Save changes"}</button></div>
+      </form>
+      <aside className="detail-card"><h3>Assignment</h3>{user?.role === "admin" ? <label>Assigned agent<select value={ticket.assigned_to || ""} disabled={saving} onChange={(e) => assign(e.target.value)}><option value="">Unassigned</option>{agents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} ({agent.email})</option>)}</select></label> : <p>{ticket.assigned_to ? `Assigned to agent #${ticket.assigned_to}` : "Unassigned"}</p>}</aside>
+      <section className="detail-card notes-card"><h3>Notes</h3><form onSubmit={addNote} className="note-form"><textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add an internal note…" /><button className="primary" disabled={saving}>Add note</button></form>{notes.length === 0 ? <p className="muted">No notes yet.</p> : <div className="notes-list">{notes.map((item) => <article key={item.id} className="note"><p>{item.content}</p><small>{new Date(item.created_at).toLocaleString()}</small></article>)}</div>}</section>
+    </div>}
+  </AppShell>;
 }
