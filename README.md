@@ -146,6 +146,13 @@ Full OpenAPI documentation is exposed at `https://<api-domain>/docs`.
 4. Deploy. The included `vercel.json` supports direct access to client routes such as `/support` and `/tickets/TKT-001`.
 5. Update Railway `FRONTEND_ORIGINS` with the exact Vercel URL and redeploy the API.
 
+## Live application
+
+The public customer support portal is available at:
+https://support-desk-rho-ashy.vercel.app/support
+
+Customers can submit support requests without creating an account. Staff members use the protected login and dashboard to manage tickets, assignments, internal notes, employees, and ticket status.
+
 ## Validation
 
 From `frontend`:
