@@ -4,7 +4,7 @@ SupportDesk is a FastAPI and React customer-support ticketing application. It pr
 
 ## Run locally
 
-Copy `backend/.env.example` to `backend/.env`, set a real `SECRET_KEY`, and set `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The app creates that admin account the first time it starts. Then start the API from `backend`:
+Copy `backend/.env.example` to `backend/.env`, set a real `SECRET_KEY`, and set `ADMIN_EMAIL` and `ADMIN_PASSWORD`. These variables define the sole administrator account and reset its password at backend startup. Then start the API from `backend`:
 
 ```powershell
 uvicorn app.main:app --reload

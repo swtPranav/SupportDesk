@@ -16,7 +16,7 @@ Base.metadata.create_all(bind=engine)
 
 
 def seed_admin_account():
-    """Create a staff login only when deployment environment variables request it."""
+    """Make the configured deployment administrator the sole staff administrator."""
     email = os.getenv("ADMIN_EMAIL")
     password = os.getenv("ADMIN_PASSWORD")
     if not email or not password:
@@ -26,15 +26,29 @@ def seed_admin_account():
 
     db = SessionLocal()
     try:
-        if not db.query(User).filter(User.email == email).first():
-            db.add(User(
+        admin = db.query(User).filter(User.email == email).first()
+        if admin is None:
+            admin = User(
                 name=os.getenv("ADMIN_NAME", "SupportDesk Admin"),
                 email=email,
                 password_hash=hash_password(password),
                 role="admin",
                 is_active=True,
-            ))
-            db.commit()
+            )
+            db.add(admin)
+        else:
+            admin.name = os.getenv("ADMIN_NAME", "SupportDesk Admin")
+            admin.password_hash = hash_password(password)
+            admin.role = "admin"
+            admin.is_active = True
+
+        # Prevent old or accidentally-created administrator accounts from
+        # retaining management access after the deployment is restarted.
+        db.query(User).filter(
+            User.email != email,
+            User.role == "admin",
+        ).update({User.role: "agent"})
+        db.commit()
     finally:
         db.close()
 

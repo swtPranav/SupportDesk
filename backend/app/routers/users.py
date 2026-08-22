@@ -40,8 +40,9 @@ def create_user(
         name=user_data.name,
         email=user_data.email,
         password_hash=hash_password(user_data.password),
-        role=user_data.role,
-        is_active=True,
+        role="agent",
+        # A new employee cannot sign in until an administrator approves them.
+        is_active=False,
     )
 
     db.add(user)
